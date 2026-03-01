@@ -3,14 +3,14 @@ import tensorflow as tf
 import numpy as np
 import cv2
 from PIL import Image
+import requests
+from io import BytesIO
 
-# Page config
 st.set_page_config(page_title="Plant Health Detection", page_icon="🌿")
 
 st.title("🌿 Plant Health Detection")
-st.write("Upload a leaf image to check if it is Healthy or Unhealthy.")
+st.write("Waiting for Raspberry Pi image...")
 
-# Load model (cached so it loads only once)
 @st.cache_resource
 def load_model():
     model = tf.keras.models.load_model("healthy_unhealthy_model.h5")
@@ -29,19 +29,19 @@ def predict_image(image):
     p = model.predict(img)[0][0]
 
     if p >= 0.5:
-        label = "Unhealthy"
-        confidence = p * 100
+        return "Unhealthy", p * 100
     else:
-        label = "Healthy"
-        confidence = (1 - p) * 100
+        return "Healthy", (1 - p) * 100
 
-    return label, confidence
 
-uploaded_file = st.file_uploader("📤 Upload Leaf Image", type=["jpg", "jpeg", "png"])
+# 🔹 Image URL input (from Raspberry Pi)
+image_url = st.text_input("Image URL from Raspberry Pi")
 
-if uploaded_file is not None:
-    image = Image.open(uploaded_file)
-    st.image(image, caption="Uploaded Image", use_column_width=True)
+if image_url:
+    response = requests.get(image_url)
+    image = Image.open(BytesIO(response.content))
+
+    st.image(image, caption="Received Image", use_column_width=True)
 
     label, confidence = predict_image(image)
 
